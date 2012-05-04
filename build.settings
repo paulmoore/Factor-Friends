@@ -1,0 +1,32 @@
+settings =
+{
+	orientation =
+	{
+		default = "portrait",
+ 		supported =
+		{
+			"portrait",
+			"portraitUpsidedown"
+		} 
+	},
+	iphone =
+	{
+		plist =
+		{
+			UIAppFonts = 
+			{
+				"bauhaus93.ttf"
+			},
+			UIStatusBarHidden = true,
+			CFBundleShortVersionString = "1.0",
+			CFBundleVersion = "1.0.0",
+			CFBundleIdentifier = "com.StrangeIdeasSoftware.FactorFriends",
+			UIPrerenderedIcon = true,
+			UIApplicationExitsOnSuspend = true
+		}
+	},
+	androidPermissions =
+	{
+  		"android.permission.INTERNET"
+  	}
+}
