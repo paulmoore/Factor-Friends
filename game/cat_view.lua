@@ -1,6 +1,5 @@
 local sprite = require "sprite"
 
-local NUM_SHEETS = 3
 local NUM_DANCES = 3
 
 local spriteSheets, spriteSets
@@ -8,23 +7,18 @@ local spriteSheets, spriteSets
 local view = {}
 
 function view.load ()
-	spriteSheets = {}
-	for i = 1, NUM_SHEETS do
-		local tpData    = require("res.img.cat_anim_sheet"..i)
-		spriteSheets[i] = sprite.newSpriteSheetFromData("res/img/cat_anim_sheet"..i..".png", tpData.getSpriteSheetData())
-		package.loaded["res.img.cat_anim_sheet"..i] = nil
-	end
-	spriteSets = {
-		pi   = sprite.newSpriteMultiSet({
-			{sheet = spriteSheets[1], frames = {1, 2, 3, 4, 5, 6, 7, 8}},
-			{sheet = spriteSheets[2], frames = {10, 11, 12, 13, 14, 15, 16, 17}},
-			{sheet = spriteSheets[3], frames = {1, 2, 3, 4, 5}}
-		}),
-		prime = sprite.newSpriteMultiSet({
-			{sheet = spriteSheets[1], frames = {9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20}},
-			{sheet = spriteSheets[2], frames = {1, 2, 3, 4, 5, 6, 7, 8, 9}}
-		})
+	local tpDataPrime = require "res.anim.prime_anim"
+	local tpDataPi    = require "res.anim.pi_anim"
+	spriteSheets = {
+		prime = sprite.newSpriteSheetFromData("res/anim/prime_anim.png", tpDataPrime.getSpriteSheetData()),
+		pi    = sprite.newSpriteSheetFromData("res/anim/pi_anim.png", tpDataPi.getSpriteSheetData())
 	}
+	spriteSets = {
+		prime = sprite.newSpriteSet(spriteSheets.prime, 1, 21),
+		pi    = sprite.newSpriteSet(spriteSheets.pi, 1, 21)
+	}
+	package.loaded["res.anim.prime_anim"] = nil
+	package.loaded["res.anim.pi_anim"]    = nil
 	sprite.add(spriteSets.pi, "idle", 1, 8, 250, -2)
 	sprite.add(spriteSets.pi, "dance1", 9, 4, 250, -1)
 	sprite.add(spriteSets.pi, "dance2", 13, 4, 250, -1)
@@ -36,12 +30,11 @@ function view.load ()
 end
 
 function view.unload ()
-	for i = NUM_SHEETS, 1, -1 do
-		spriteSheets[i]:removeSelf()
-		spriteSheets[i] = nil
+	for name, spriteSheet in pairs(spriteSheets) do
+		spriteSheet:removeSelf()
 	end
-	spriteSheet = nil
-	spriteSets  = nil
+	spriteSheets = nil
+	spriteSets   = nil
 end
 
 function view.new (name)

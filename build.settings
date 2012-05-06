@@ -13,16 +13,32 @@ settings =
 	{
 		plist =
 		{
-			UIAppFonts = 
-			{
-				"bauhaus93.ttf"
-			},
 			UIStatusBarHidden = true,
 			CFBundleShortVersionString = "1.0",
 			CFBundleVersion = "1.0.0",
 			CFBundleIdentifier = "com.StrangeIdeasSoftware.FactorFriends",
 			UIPrerenderedIcon = true,
-			UIApplicationExitsOnSuspend = true
+			UIApplicationExitsOnSuspend = false,
+			CFBundleIconFile = "Icon.png",
+			CFBundleIconFiles =
+			{
+				"Icon.png",
+				"Icon@2x.png",
+				"Icon-72.png"
+			},
+			UIAppFonts = 
+			{
+				"bauhaus93.ttf"
+			},
+			CFBundleURLTypes =
+            {
+                {
+                    CFBundleURLSchemes =
+                    {
+						"fb223466991100849"
+                    }
+                }
+            }
 		}
 	},
 	androidPermissions =

@@ -13,13 +13,14 @@ local AES_KEY = string.char(
 	0x0C, 0x0D, 0x0E, 0x0F
 )
 
-local connId
+local myId, oppId
 
 local function dispatch (type, args)
 	args        = args or {}
 	args.name   = "net"
 	args.type   = type
-	args.connId = connId
+	args.myId   = myId
+	args.oppId  = oppId
 	Runtime:dispatchEvent(args)
 end
 
@@ -34,10 +35,11 @@ function net.init ()
 	})
 end
 
-function net.join (userId)
-	connId = userId
+function net.join (_myId, _oppId)
+	myId = _myId
+	oppId = _oppId
 	net.pn:subscribe({
-		channel   = "game_"..connId,
+		channel   = "game_"..myId,
 		errorback = function (reason)
 			dispatch("error", {
 				details = reason
@@ -54,6 +56,14 @@ function net.join (userId)
 	})
 end
 
+function net.leave ()
+	net.pn:unsubscribe({
+		channel = "game_"..myId
+	})
+	myId  = nil
+	oppId = nil
+end
+
 function net.listen (callback)
 	Runtime:addEventListener("net", callback)
 end
@@ -64,7 +74,7 @@ end
 
 function net.send (message)
 	net.pn:publish({
-		channel  = "game_"..connId,
+		channel  = "game_"..oppId,
 		message  = message,
 		callback = function (result)
 			dispatch("send", {

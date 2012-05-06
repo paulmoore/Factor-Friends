@@ -3,7 +3,7 @@ local primes = {}
 function primes.generate (lowBound, highBound, amount)
 	local primes   = {}
 	local toReturn = {}
-	for i = lowBound, highBound, 2 do
+	for i = lowBound, highBound, 1 do
 		primes[#primes + 1] = i
 	end
 	local l = #primes
@@ -13,7 +13,7 @@ function primes.generate (lowBound, highBound, amount)
 			for j = i + 1, l do
 				local multiple = primes[j]
 				if multiple and multiple % prime == 0 then
-					prime[j] = nil
+					primes[j] = nil
 				end
 			end
 		end

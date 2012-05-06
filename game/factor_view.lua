@@ -9,12 +9,12 @@ function view.new ()
 	
 	local function onButtonEvent (event)
 		local btn = event.target
-		if "release" == event.phase then
+		if "release" == event.phase and btn.isHitTestable then
 			btn.alpha         = 0.5
 			btn.isHitTestable = false
 			self:dispatchEvent({
 				name = "select",
-				id   = event.target.id
+				id   = btn.id
 			})
 		end
 	end
@@ -31,16 +31,17 @@ function view.new ()
 			onEvent    = onButtonEvent,
 			default    = "res/img/game_btn_factor_default.png"
 		})
-		btn.alpha = 0.0
-		btns[i]   = btn
+		btn.alpha         = 0.0
+		btns[i]           = btn
+		btn.isHitTestable = false
 		display.zero(btn)
 		self:insert(btn)
 	end
 	
 	function self:show ()
 		local incr   = math.pi * 2 / NUM_BTNS
-		local xscale = display.contentWidth / 2.5
-		local yscale = display.contentHeight / 2.5
+		local xscale = display.contentWidth / 2.7
+		local yscale = display.contentHeight / 3.0
 		for i, btn in ipairs(btns) do
 			local deg = (i - 1) * incr
 			local nx = math.cos(deg) * xscale
@@ -50,19 +51,23 @@ function view.new ()
 				x          = nx,
 				y          = ny,
 				alpha      = 1.0,
-				transition = easing.outQuad
+				transition = easing.outQuad,
+				onComplete = function ()
+					btn.isHitTestable = true
+				end
 			})
 		end
 	end
 	
 	function self:hide ()
 		for i, btn in ipairs(btns) do
+			btn.isHitTestable = false
 			transition.to(btn, {
 				time       = 500,
 				x          = 0,
 				y          = 0,
 				alpha      = 0.0,
-				transition = easing.outQuad
+				transition = easing.outQuad,
 			})
 		end
 	end
