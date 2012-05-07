@@ -1,50 +1,27 @@
 
 local storyboard = require "storyboard"
-local net        = require "net"
-local sprite     = require "sprite"
 local widget     = require "widget"
-local json       = require "json"
+local net        = require "net"
 
 local scene = storyboard.newScene()
 
 local spriteSheet, spriteSet
 
-local loginSprite
-local githubBtn, logoutBtn
+local friend
 
-local function onNetEvent (event)
-	if "login" == event.type then
-        storyboard.showOverlay("menu.overlay")
-    elseif "logout" == event.type then
-		storyboard.hideOverlay(true)
-	elseif "error" == event.type then
-		native.showAlert("Uh-Oh!", event.details, {"Ok"})
-    end
-end
+local myAnim, friendAnim
 
-local function onLoginSpriteTap (event)
-	net.login()
-end
+local cancelBtn
 
-local function onLoginSpriteEvent (event)
-	if "end" == event.phase then
-		if "close" == loginSprite.sequence then
-			loginSprite.isVisible = false
-		end
-	end
-end
-
-local function onLogoutBtnRelease (event)
-	net.logout()
-	storyboard.hideOverlay(true)
-end
-
-local function onGithubBtnRelease (event)
-	system.openURL("https://github.com/paulmoore/Factor-Friends")
+local function onCancelBtnRelease ()
+	net.send(friend.id, {action = "cancel"})
+	storyboard.gotoScene("menu.scene")
 end
 
 -- Called when the scene's view does not exist:
 local function onCreateScene (event)
+	friend = net.friends()[event.params]
+	
 	local bg = display.newImage(scene.view, "res/img/menu_bg.png", 0, 0, true)
 	display.center(bg)
 	
@@ -53,60 +30,69 @@ local function onCreateScene (event)
 	logo.x = display.contentCenterX
 	logo.y = 10
 	
-	githubBtn = widget.newButton({
-		width     = 297,
-		height    = 146,
-		onRelease = onGithubBtnRelease,
-		default   = "res/img/menu_btn_github_default.png",
-		over      = "res/img/menu_btn_github_over.png"
-	})
-	scene.view:insert(githubBtn)
-	githubBtn:setReferencePoint(display.BottomRightReferencePoint)
-	githubBtn.x = display.contentWidth - 5
-	githubBtn.y = display.contentHeight - 5
-	
-	logoutBtn = widget.newButton({
+	cancelBtn = widget.newButton({
 		width     = 74,
 		height    = 102,
-		onRelease = onLogoutBtnRelease,
+		onRelease = onCancelBtnRelease,
 		default   = "res/img/btn_quit_default.png",
 		over      = "res/img/btn_quit_over.png"
 	})
-	scene.view:insert(logoutBtn)
-	logoutBtn:setReferencePoint(display.TopLeftReferencePoint)
-	logoutBtn.x = logo.x - logo.width / 2
-	logoutBtn.y = logo.y + logo.height - 20
-	logoutBtn.isVisible = false
+	scene.view:insert(cancelBtn)
+	cancelBtn:setReferencePoint(display.TopLeftReferencePoint)
+	cancelBtn.x = logo.x - logo.width / 2
+	cancelBtn.y = logo.y + logo.height - 20
 	
-	local data  = require "res.anim.login_anim"
-	spriteSheet = sprite.newSpriteSheetFromData("res/anim/login_anim.png", data.getSpriteSheetData())
-	spriteSet   = sprite.newSpriteSet(spriteSheet, 1, 35)
-	package.loaded["res.anim.login_anim"] = nil
-	sprite.add(spriteSet, "open", 18, 18, 594, 1)
-	sprite.add(spriteSet, "close", 1, 18, 594, 1)
+	local data  = require "res.anim.connect_anim"
+	spriteSheet = sprite.newSpriteSheetFromData("res/anim/connect_anim.png", data.getSpriteSheetData())
+	package.loaded["res.anim.connect_anim"] = nil
+	spriteSet = sprite.newSpriteSet(spriteSheet, 1, 27)
+	sprite.add(spriteSet, "pi", 1, 9, 297, 1)
+	sprite.add(spriteSet, "prime", 10, 9, 297, 1)
+	sprite.add(spriteSet, "wait", 19, 9, 594, 0)
 	
-	loginSprite = sprite.newSprite(spriteSet)
-	scene.view:insert(loginSprite)
-	display.center(loginSprite)
-	loginSprite:addEventListener("sprite", onLoginSpriteEvent)
-	loginSprite:addEventListener("tap", onLoginSpriteTap)
+	friendAnim = sprite.newSprite(spriteSet)
+	scene.view:insert(friendAnim)
+	friendAnim:setReferencePoint(display.CenterRightReferencePoint)
+	friendAnim.x = display.contentWidth - 100
+	friendAnim.y = display.contentCenterY
 	
-	net.listen(onNetEvent)
+	local friendName = display.newText(scene.view, friend.name, 0, 0, "Bauhaus93", 34)
+	friendName:setTextColor(0x00, 0x00, 0x00)
+	friendName:setReferencePoint(display.TopCenterReferencePoint)
+	friendName.x = friendAnim.x - friendAnim.width / 2
+	friendName.y = friendAnim.y + friendAnim.height / 2 + 10
+	
+	myAnim = sprite.newSprite(spriteSet)
+	scene.view:insert(myAnim)
+	myAnim:setReferencePoint(display.CenterLeftReferencePoint)
+	myAnim.x = 100
+	myAnim.y = display.contentCenterY
+	
+	local myName = display.newText(scene.view, net.user().name, 0, 0, "Bauhaus93", 34)
+	myName:setTextColor(0x00, 0x00, 0x00)
+	myName:setReferencePoint(display.TopCenterReferencePoint)
+	myName.x = myAnim.x + myAnim.width / 2
+	myName.y = myAnim.y + myAnim.height / 2 + 10
+	
+	local arrow = display.newImage(scene.view, "res/img/connect_arrow.png")
+	display.center(arrow)
 end
 
 -- Called BEFORE scene has moved onscreen:
 local function onWillEnterScene (event)
-	if net.isLoggedIn() then
-		storyboard.showOverlay("menu.overlay")
+	friendAnim:prepare("wait")
+	friendAnim:play()
+	if "female" == net.user().gender then
+		myAnim:prepare("pi")
+	else
+		myAnim:prepare("prime")
 	end
+	myAnim:play()
 end
 
 -- Called immediately after scene has moved onscreen:
 local function onEnterScene (event)
-	if not net.isLoggedIn() then
-		loginSprite:prepare("open")
-		loginSprite:play()
-	end	
+	net.send(friend.id, {action = "connect"})
 end
 
 -- Called when scene is about to move offscreen:
@@ -115,34 +101,26 @@ end
 
 -- Called AFTER scene has finished moving offscreen:
 local function onDidExitScene (event)
+	myAnim:pause()
+	friendAnim:pause()
 end
-
 -- Called if/when overlay scene is displayed via storyboard.showOverlay()
 local function onOverlayBegan (event)
-	loginSprite:prepare("close")
-	loginSprite:play()
-	logoutBtn.isVisible = true
-	githubBtn.isVisible = false
 end
 
 -- Called if/when overlay scene is hidden/removed via storyboard.hideOverlay()
 local function onOverlayEnded (event)
-	loginSprite.isVisible = true
-	loginSprite:prepare("open")
-	loginSprite:play()
-	logoutBtn.isVisible = false
-	githubBtn.isVisible = true
 end
 
 -- Called prior to the removal of scene's "view" (display group)
 local function onDestroyScene (event)
-	net.unlisten(onNetEvent)
 	spriteSheet:removeSelf()
 	spriteSheet = nil
 	spriteSet   = nil
-	loginSprite = nil
-	githubBtn   = nil
-	logoutBtn   = nil
+	myAnim      = nil
+	friendAnim  = nil
+	cancelBtn   = nil
+	friend      = nil
 end
 
 -- "createScene" event is dispatched if scene's view does not exist

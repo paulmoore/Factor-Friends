@@ -12,6 +12,12 @@ function display.zero (obj)
 	obj.x, obj.y = 0, 0
 end
 
+display.contentBgWidth  = 760
+display.contentBgHeight = 1140
+
+display.contentBleedWidth  = (display.contentBgWidth - display.contentWidth) / 2
+display.contentBleedHeight = (display.contentBgHeight - display.contentHeight) / 2
+
 local function onSystemEvent (event)
 	if event.type == "applicationSuspend" then
 		collectgarbage("collect")
@@ -23,11 +29,6 @@ Runtime:addEventListener("system", onSystemEvent)
 
 display.setStatusBar(display.HiddenStatusBar)
 
---net.init()
---net.join(1, 2)
+net.init()
 
-storyboard.gotoScene("menu.scene", {
-	params = {
-		myId = 1
-	}
-})
+storyboard.gotoScene("menu.scene")

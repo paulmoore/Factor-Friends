@@ -6,7 +6,7 @@ settings =
  		supported =
 		{
 			"portrait",
-			"portraitUpsidedown"
+			"portraitUpsideDown"
 		} 
 	},
 	iphone =
@@ -38,7 +38,19 @@ settings =
 						"fb223466991100849"
                     }
                 }
-            }
+            },
+			UIInterfaceOrientation = "UIInterfaceOrientationPortrait",
+			["UIInterfaceOrientation~ipad"] = "UIInterfaceOrientationPortrait",
+			UISupportedInterfaceOrientations =
+			{
+				"UIInterfaceOrientationPortrait",
+				"UIInterfaceOrientationPortraitUpsideDown"
+			},
+			["UISupportedInterfaceOrientations~ipad"] =
+			{
+				"UIInterfaceOrientationPortrait",
+				"UIInterfaceOrientationPortraitUpsideDown"
+			}
 		}
 	},
 	androidPermissions =

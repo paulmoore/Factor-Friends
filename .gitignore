@@ -12,5 +12,11 @@
 bin/
 gen/
 
+# OS files
+.DS_Store*
+ehthumbs.db
+Icon?
+Thumbs.db
+
 # Local configuration file (sdk path, etc)
 local.properties
