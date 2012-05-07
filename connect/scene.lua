@@ -13,9 +13,50 @@ local myAnim, friendAnim
 
 local cancelBtn
 
+local timerId
+
+local function gotoGameScene ()
+	local options = {
+		effect = "slideLeft",
+		time   = 300,
+		params = {
+			friend  = friend,
+			isFirst = true
+		}
+	}
+	timer.performWithDelay(500, function () storyboard.gotoScene("game.scene", options) end, 1)
+end
+
+local function onNetEvent (event)
+	if "receive" == event.type then
+		local msg = event.message
+		if friend.id == msg.senderId then
+			if "accept" == msg.action then
+				if "female" == net.user().gender then
+					friendAnim:prepare("prime")
+				else
+					friendAnim:prepare("pi")
+				end
+				friendAnim:play()
+				gotoGameScene()
+			elseif "reject" == msg.action then
+				native.showAlert(":(", friend.name.." Doesn't want to play right now.", {"Ok"})
+				storyboard.gotoScene("menu.scene", "slideRight", 300)
+			end
+		end
+	end
+end
+
+local function sendRequest ()
+	net.send(friend.id, {
+		action = "connect",
+		gender = net.user().gender
+	})
+end
+
 local function onCancelBtnRelease ()
 	net.send(friend.id, {action = "cancel"})
-	storyboard.gotoScene("menu.scene")
+	storyboard.gotoScene("menu.scene", "slideRight", 300)
 end
 
 -- Called when the scene's view does not exist:
@@ -82,6 +123,13 @@ end
 local function onWillEnterScene (event)
 	friendAnim:prepare("wait")
 	friendAnim:play()
+end
+
+-- Called immediately after scene has moved onscreen:
+local function onEnterScene (event)
+	net.listen(onNetEvent)
+	sendRequest()
+	timerId = timer.performWithDelay(5000, sendRequest, 0)
 	if "female" == net.user().gender then
 		myAnim:prepare("pi")
 	else
@@ -90,13 +138,10 @@ local function onWillEnterScene (event)
 	myAnim:play()
 end
 
--- Called immediately after scene has moved onscreen:
-local function onEnterScene (event)
-	net.send(friend.id, {action = "connect"})
-end
-
 -- Called when scene is about to move offscreen:
 local function onExitScene (event)
+	timer.cancel(timerId)
+	net.unlisten(onNetEvent)
 end
 
 -- Called AFTER scene has finished moving offscreen:

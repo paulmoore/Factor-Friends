@@ -12,14 +12,59 @@ local spriteSheet, spriteSet
 local loginSprite
 local githubBtn, logoutBtn
 
+local alertId
+local friend
+
+local showAnim = false
+
+local function gotoGameScene ()
+	local options = {
+		effect = "slideLeft",
+		time   = 500,
+		params = {
+			friend  = friend,
+			isFirst = false
+		}
+	}
+	storyboard.gotoScene("game.scene", options)
+end
+
+local function onAlertEvent (event)
+	if "clicked" == event.action then
+		if 2 == event.index then
+			net.send(friend.id, {action = "accept"})
+			gotoGameScene()
+		else
+			net.send(friend.id, {action = "reject"})
+		end
+		friend  = nil
+		alertId = nil
+	elseif "cancelled" == event.action then
+		friend  = nil
+		alertId = nil
+	end
+end
+
 local function onNetEvent (event)
 	if "login" == event.type then
-        storyboard.showOverlay("menu.overlay")
+		showAnim = true
+        storyboard.showOverlay("menu.overlay", "fromBottom", 1000)
     elseif "logout" == event.type then
-		storyboard.hideOverlay(true)
+		storyboard.hideOverlay(true, "fromBottom", 1000)
 	elseif "error" == event.type then
 		native.showAlert("Uh-Oh!", event.details, {"Ok"})
-    end
+    elseif "receive" == event.type then
+		local msg = event.message
+		if "connect" == msg.action and not friend then
+			friend = net.friendForId(msg.senderId)
+			if friend then
+				friend.gender = msg.gender
+				alertId = native.showAlert("Challenge", friend.name.." challenges you to a game.  Do you accept?", {"No", "Yes"}, onAlertEvent)
+			end
+		elseif "cancel" == msg.action and friend and friend.id == msg.senderId then
+			native.cancelAlert(alertId)
+		end
+	end
 end
 
 local function onLoginSpriteTap (event)
@@ -36,7 +81,6 @@ end
 
 local function onLogoutBtnRelease (event)
 	net.logout()
-	storyboard.hideOverlay(true)
 end
 
 local function onGithubBtnRelease (event)
@@ -86,31 +130,34 @@ local function onCreateScene (event)
 	sprite.add(spriteSet, "close", 1, 18, 594, 1)
 	
 	loginSprite = sprite.newSprite(spriteSet)
+	loginSprite.isVisible = false
 	scene.view:insert(loginSprite)
 	display.center(loginSprite)
 	loginSprite:addEventListener("sprite", onLoginSpriteEvent)
 	loginSprite:addEventListener("tap", onLoginSpriteTap)
-	
-	net.listen(onNetEvent)
 end
 
 -- Called BEFORE scene has moved onscreen:
 local function onWillEnterScene (event)
 	if net.isLoggedIn() then
-		storyboard.showOverlay("menu.overlay")
+		showAnim = false
+		storyboard.showOverlay("menu.overlay", "fromBottom", 1000)
 	end
 end
 
 -- Called immediately after scene has moved onscreen:
 local function onEnterScene (event)
 	if not net.isLoggedIn() then
+		loginSprite.isVisible = true
 		loginSprite:prepare("open")
 		loginSprite:play()
 	end	
+	net.listen(onNetEvent)
 end
 
 -- Called when scene is about to move offscreen:
 local function onExitScene (event)
+	net.unlisten(onNetEvent)
 end
 
 -- Called AFTER scene has finished moving offscreen:
@@ -119,10 +166,11 @@ end
 
 -- Called if/when overlay scene is displayed via storyboard.showOverlay()
 local function onOverlayBegan (event)
-	loginSprite:prepare("close")
-	loginSprite:play()
+	if showAnim then
+		loginSprite:prepare("close")
+		loginSprite:play()
+	end
 	logoutBtn.isVisible = true
-	githubBtn.isVisible = false
 end
 
 -- Called if/when overlay scene is hidden/removed via storyboard.hideOverlay()
@@ -131,7 +179,6 @@ local function onOverlayEnded (event)
 	loginSprite:prepare("open")
 	loginSprite:play()
 	logoutBtn.isVisible = false
-	githubBtn.isVisible = true
 end
 
 -- Called prior to the removal of scene's "view" (display group)

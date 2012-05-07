@@ -25,7 +25,7 @@ function view.new ()
 		end
 		label:setReferencePoint(display.CenterReferencePoint)
 		display.zero(label)
-		label.y = label.y + 25
+		label.y = label.y + 35
 	end
 	
 	function self:addFactor (factor, pos)
@@ -43,6 +43,14 @@ function view.new ()
 		label.text = ""
 		factors    = {}
 		answer     = nil
+	end
+	
+	function self:destroy ()
+		self:removeSelf()
+		self    = nil
+		bar     = nil
+		label   = nil
+		factors = nil
 	end
 	
 	return self

@@ -38,48 +38,55 @@ function view.unload ()
 end
 
 function view.new (name)
-	local self = sprite.newSprite(spriteSets[name])
+	local self = display.newGroup()
 	
-	display.center(self)
+	local anim = sprite.newSprite(spriteSets[name])
+	self:insert(anim)
+	display.zero(anim)
+	
 	self:setReferencePoint(display.BottomCenterReferencePoint)
 	
-	local danceListener
+	local nameLabel = display.newText(self, "", 0, 0, "Bauhaus93", 38)
+	nameLabel:setTextColor(0x00, 0x00, 0x00)
 	
 	local function onAnimationEvent (event)
 		if "end" == event.phase then
-			self.xScale = 1
+			anim.xScale = 1
 			self:idle()
-			if danceListener then
-				danceListener()
-				danceListener = nil
-			end
 		end
 	end
-	self:addEventListener("sprite", onAnimationEvent)
+	anim:addEventListener("sprite", onAnimationEvent)
+	
+	function self:setName (name)
+		nameLabel.text = name
+		nameLabel:setReferencePoint(display.TopCenterReferencePoint)
+		nameLabel.x = 0
+		nameLabel.y = anim.y + anim.height / 2 - 15
+	end
 	
 	function self:idle ()
-		self:prepare("idle")
-		self:play()
+		anim:prepare("idle")
+		anim:play()
 	end
 	
-	function self:dance (id, onComplete)
-		danceListener = onComplete
+	function self:pause ()
+		anim:pause()
+	end
+	
+	function self:dance (id)
 		if id > NUM_DANCES then
 			id = id - NUM_DANCES
-			self.xScale = -1
+			anim.xScale = -1
 		end
-		self:prepare("dance"..id)
-		self:play()
+		anim:prepare("dance"..id)
+		anim:play()
 	end
 	
-	function self:sendToFront (snap)
-		local time = 250
-		if snap then
-			time = 0
-		end
+	function self:sendToFront (time)
+		time = time or 250
 		transition.to(self, {
 			time = time,
-			x    = display.contentCenterX,
+			x    = 0,
 			onComplete = function ()
 				self:toFront()
 				transition.to(self, {
@@ -91,14 +98,11 @@ function view.new (name)
 		})
 	end
 	
-	function self:sendToBack (snap)
-		local time = 250
-		if snap then
-			time = 0
-		end
+	function self:sendToBack (time)
+		time = time or 250
 		transition.to(self, {
 			time = time,
-			x    = display.contentCenterX + 200,
+			x    = display.contentCenterX - 100,
 			onComplete = function ()
 				self:toBack()
 				transition.to(self, {
@@ -112,7 +116,9 @@ function view.new (name)
 	
 	function destroy ()
 		self:removeSelf()
-		self = nil
+		self      = nil
+		anim      = nil
+		nameLabel = nil
 	end
 		
 	return self

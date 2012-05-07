@@ -1,101 +1,106 @@
 local storyboard  = require "storyboard"
 local widget      = require "widget"
 local net         = require "net"
-local primes      = require "game.primes"
 local cat_view    = require "game.cat_view"
 local factor_view = require "game.factor_view"
 local answer_view = require "game.answer_view"
+local splash_view = require "game.splash_view"
 
 local scene = storyboard.newScene()
 
 local uiQuitBtn
 local uiFactorView
 local uiAnswerView
+local uiSplashView
 
 local catGroup
+local piSprite, primeSprite
+
+local friend
+
+local primes
 
 local factors, selected
 local target
-local myId
+
 local turnId, turnNum
-local lowBound, highBound
-local myScore, oppScore
+local myScore, friendScore
 
-local NUM_SELECTS        = 3
-local NUM_FACTORS        = 6
-local INITIAL_LOW_BOUND  = 2
-local INITIAL_HIGH_BOUND = 3
-local NUM_TURNS          = 5
+local NUM_SELECTS   = 3
+local NUM_FACTORS   = 6
+local NUM_TURNS     = 5
+local HIGHEST_PRIME = 113
 
-local function splashText (msg)
-	local text = display.newText(scene.view, msg, 0, 0, "Bauhaus93", 90)
-	text:setTextColor(0xf5, 0x91, 0x33)
-	text:setReferencePoint(display.CenterReferencePoint)
-	display.center(text)
-	text.rotation = -30
-	transition.from(text, {
-		time   = 250,
-		alpha  = 0.0,
-		xScale = 0.01,
-		yScale = 0.01,
-		onComplete = function ()
-			timer.performWithDelay(1000, function ()
-				transition.to(text, {
-					time       = 500,
-					alpha      = 0.0,
-					xScale     = 0.01,
-					yScale     = 0.01,
-					transition = easing.inExpo,
-					onComplete = function ()
-						text:removeSelf()
-					end
-				})
-			end, 1)
+local function generatePrimes ()
+	local arr = {}
+	for i = 2, HIGHEST_PRIME, 1 do
+		arr[#arr + 1] = i
+	end
+	local l = #arr
+	for i = 1, l do
+		local prime = arr[i]
+		if prime then
+			for j = i + 1, l do
+				local multiple = arr[j]
+				if multiple and multiple % prime == 0 then
+					arr[j] = nil
+				end
+			end
 		end
-	})
+	end
+	primes = {}
+	for i = 1, l do
+		if arr[i] then
+			primes[#primes + 1] = arr[i]
+		end
+	end
+end
+
+local function pickFactors ()
+	for i = 1, NUM_FACTORS do
+		factors[i] = primes[math.random(1, turnNum + 1)]
+	end
 end
 
 local function checkScores ()
 	if turnNum >= NUM_TURNS then
-		if myScore > oppScore then
-			splashText("You Win!")
-		elseif oppScore > myScore then
-			splashText("Opp Wins!")
-		else
-			return false
+		if myScore > friendScore then
+			uiSplashView:show("You Win!")
+			return true
+		elseif friendScore > myScore then
+			uiSplashView:show(friend.name.." Wins!")
+			return true
 		end
-		return true
 	end
 	return false
 end
 
+local function isMyTurn ()
+	return turnId == net.user().id
+end
+
 local function startTurn ()
-	local done = checkScores()
-	if done then
-		return
-	end
-	factors  = primes.generate(lowBound, highBound, NUM_FACTORS)
+	turnNum = turnNum + 1
+	turnId  = net.user().id
+	pickFactors()
 	selected = {}
 	uiFactorView:setLabels(factors)
 	uiFactorView:show()
 	uiAnswerView:clear()
-	splashText("Your Turn!")
+	uiSplashView:show("Your Turn!")
 end
 
 local function endTurn ()
 	turnNum = turnNum + 1
-	if turnId == 1 then
-		turnId = 2
-	else
-		turnId = 1
-	end
+	turnId  = friend.id
 	target = 1
 	for i, p in ipairs(selected) do
 		target = target * p
 	end
-	net.send({
+	net.send(friend.id, {
 		action  = "challenge",
-		integer = target
+		target  = target,
+		factors = factors
 	})
 	uiAnswerView:addFactor("?", 1)
 	uiAnswerView:addFactor("?", 2)
@@ -104,78 +109,74 @@ local function endTurn ()
 	uiFactorView:hide()
 	catGroup[1]:sendToFront()
 	catGroup[2]:sendToBack()
-	splashText("Opp Challenge!")
+	uiSplashView:show(friend.name.." must factor "..target.."!")
 end
 
 local function startChallenge ()
-	factors  = primes.generate(lowBound, highBound, NUM_FACTORS)
 	selected = {}
 	catGroup[1]:sendToFront()
 	catGroup[2]:sendToBack()
-	uiAnswerView:clear()
 	uiAnswerView:addFactor("?", 1)
 	uiAnswerView:addFactor("?", 2)
 	uiAnswerView:addFactor("?", 3)
 	uiAnswerView:addAnswer(target)
 	uiFactorView:setLabels(factors)
 	uiFactorView:show()
-	splashText("Factor "..target.."!")
+	uiSplashView:show("Factor "..target.."!")
 end
 
 local function endChallenge ()
-	turnNum = turnNum + 1
-	if turnId == 1 then
-		turnId = 2
-	else
-		turnId = 1
-	end
 	local result = 1
 	for i, p in ipairs(selected) do
 		result = result * p
 	end
 	if result == target then
-		splashText("Correct!")
 		myScore = myScore + 1
+		uiSplashView:show("Correct!")
 	else
-		splashText("Opps!")
+		uiSplashView:show("Incorrect!")
 	end
-	net.send({
+	net.send(friend.id, {
 		action = "guess",
-		guess  = result
+		result = result
 	})
 	target = nil
-	lowBound  = lowBound + 2
-	highBound = highBound + 5
 	uiFactorView:hide()
-	timer.performWithDelay(1500, startTurn, 1)
+	if not checkScores() then
+		startTurn()
+	end
+end
+
+local function onQuitBtnRelease ()
+	net.send(friend.id, {action = "quit"})
+	storyboard.gotoScene("menu.scene", "slideLeft", 500)
 end
 
 local function onNetEvent (event)
 	if "receive" == event.type then
-		local message = event.message
-		if "dance" == message.action then
+		local msg = event.message
+		if "dance" == msg.action then
 			catGroup[2]:dance(math.random(1, NUM_FACTORS))
-			uiAnswerView:addFactor(message.factor, message.num)
-		elseif "challenge" == message.action then
-			target = message.integer
+			uiAnswerView:addFactor(msg.factor, msg.num)
+		elseif "challenge" == msg.action then
+			target  = msg.target
+			factors = msg.factors
 			startChallenge()
-		elseif "guess" == message.action then
-			if message.guess == target then
-				splashText("Opp is Correct!")
-				oppScore = oppScore + 1
+		elseif "guess" == msg.action then
+			if msg.result == target then
+				friendScore = friendScore + 1
+				uiSplashView:show(friend.name.." is Correct!")
 			else
-				splashText("Opp is Wrong!")
+				uiSplashView:show(friend.name.." is Incorrect!")
 			end
-			uiAnswerView:addAnswer(message.guess)
-			local done = checkScores()
-			if not done then
-				timer.performWithDelay(1500, function ()
-					uiAnswerView:clear()
-					splashText("Opp's Turn!")
-				end, 1)
-				lowBound  = lowBound + 2
-				highBound = highBound + 5
+			uiAnswerView:addAnswer(msg.result)
+			if not checkScores() then
+				uiSplashView:show(friend.name.."'s Turn!")
+				timer.performWithDelay(1000, function () uiAnswerView:clear() end, 1)
 			end
+		elseif "quit" == msg.action then
+			native.showAlert("Quit", friend.name.." has left the game.", {"Ok"})
+			storyboard.gotoScene("menu.scene", "slideLeft", 500)
 		end
 	end
 end
@@ -183,29 +184,26 @@ end
 local function onFactorSelect (event)
 	local factor = factors[event.id]
 	selected[#selected + 1] = factor
+	uiAnswerView:addFactor(factor, #selected)
 	if #selected == NUM_SELECTS then
-		if turnId == myId then
-			catGroup[2]:dance(event.id, endTurn)
+		if isMyTurn() then
+			catGroup[2]:dance(event.id)
+			timer.performWithDelay(500, endTurn, 1)
 		else
-			catGroup[2]:dance(event.id, endChallenge)
+			catGroup[2]:dance(event.id)
+			timer.performWithDelay(500, endChallenge, 1)
 		end
 	else
 		catGroup[2]:dance(event.id)
 	end
-	if myId ~= turnId then
-		net.send({
-			action = "dance",
-			factor = factor,
-			num    = #selected
-		})
-	else
-		net.send({
-			action = "dance",
-			factor = "?",
-			num    = #selected
-		})
+	if isMyTurn() then
+		factor = "?"
 	end
-	uiAnswerView:addFactor(factor, #selected)
+	net.send(friend.id, {
+		action = "dance",
+		factor = factor,
+		num    = #selected
+	})
 end
 
 -- Called when the scene's view does not exist:
@@ -213,47 +211,93 @@ local function onCreateScene (event)
 	local bg = display.newImage(scene.view, "res/img/game_bg.png", 0, 0, true)
 	display.center(bg)
 	
-	catGroup = display.newGroup()
-	scene.view:insert(catGroup)
+	local logo = display.newImage(scene.view, "res/img/logo.png")
+	logo:setReferencePoint(display.TopCenterReferencePoint)
+	logo.x = display.contentCenterX
+	logo.y = 10
 	
 	cat_view.load()
-
-	catGroup:insert(cat_view.new("prime"))	
-	catGroup:insert(cat_view.new("pi"))
+	catGroup = display.newGroup()
+	scene.view:insert(catGroup)
+	piSprite    = cat_view.new("pi")
+	primeSprite = cat_view.new("prime")
+	catGroup:insert(piSprite)	
+	catGroup:insert(primeSprite)
+	display.center(catGroup)
 	
 	uiFactorView = factor_view.new()
 	scene.view:insert(uiFactorView)
 	uiFactorView:addEventListener("select", onFactorSelect)
-	display.center(uiFactorView)
+	uiFactorView.x = display.contentCenterX
+	uiFactorView.y = display.contentCenterY + 20
 	
 	uiAnswerView = answer_view.new()
 	scene.view:insert(uiAnswerView)
 	uiAnswerView.x = display.contentCenterX
-	uiAnswerView.y = display.contentHeight - uiAnswerView.height / 2 - 5
+	uiAnswerView.y = display.contentHeight - uiAnswerView.height / 2
+	
+	uiSplashView = splash_view.new()
+	display.center(uiSplashView)
+	
+	uiQuitBtn = widget.newButton({
+		width     = 74,
+		height    = 102,
+		onRelease = onQuitBtnRelease,
+		default   = "res/img/btn_quit_default.png",
+		over      = "res/img/btn_quit_over.png"
+	})
+	scene.view:insert(uiQuitBtn)
+	uiQuitBtn:setReferencePoint(display.TopLeftReferencePoint)
+	uiQuitBtn.x = logo.x - logo.width / 2
+	uiQuitBtn.y = logo.y + logo.height - 20
+	
+	generatePrimes()
 end
 
 -- Called BEFORE scene has moved onscreen:
 local function onWillEnterScene (event)
-	catGroup[1]:idle()
-	catGroup[1]:sendToFront(true)
-	catGroup[2]:idle()
-	catGroup[2]:sendToBack(true)
-	
-	turnId    = 1
-	turnNum   = 0
-	myScore   = 0
-	oppScore  = 0
-	lowBound  = INITIAL_LOW_BOUND
-	highBound = INITIAL_HIGH_BOUND
+	local params = event.params
+	friend = params.friend
+	if params.isFirst then
+		if "female" == net.user().gender then
+			primeSprite:sendToBack(0)
+			primeSprite:setName(friend.name)
+			piSprite:sendToFront(0)
+			piSprite:setName(net.user().name)
+		else
+			primeSprite:sendToFront(0)
+			primeSprite:setName(net.user().name)
+			piSprite:sendToBack(0)
+			piSprite:setName(friend.name)
+		end
+	else
+		if "female" == friend.gender then
+			primeSprite:sendToBack(0)
+			primeSprite:setName(net.user().name)
+			piSprite:sendToFront(0)
+			piSprite:setName(friend.name)
+		else
+			primeSprite:sendToFront(0)
+			primeSprite:setName(friend.name)
+			piSprite:sendToBack(0)
+			piSprite:setName(net.user().name)
+		end
+	end
+	primeSprite:idle()
+	piSprite:idle()
 end
 
 -- Called immediately after scene has moved onscreen:
 local function onEnterScene (event)
-	myId = event.params.myId
-	if myId == 1 then
+	local params = event.params
+	turnNum      = 0
+	myScore      = 0
+	friendScore  = 0
+	factors      = {}
+	if params.isFirst then
 		startTurn()
 	else
-		splashText("Opp's Turn!")
+		uiSplashView:show(friend.name.."'s Turn!")
 	end
 	net.listen(onNetEvent)
 end
@@ -278,10 +322,19 @@ end
 
 -- Called prior to the removal of scene's "view" (display group)
 local function onDestroyScene (event)
-	cat_view.unload()
 	uiFactorView:destroy()
 	uiFactorView = nil
-	catGroup     = nil
+	uiSplashView:destroy()
+	uiSplashView = nil
+	uiAnswerView:destroy()
+	uiAnswerView = nil
+	uiQuitBtn    = nil
+	piSprite:destroy()
+	primeSprite:destroy()
+	piSprite    = nil
+	primeSprite = nil
+	catGroup    = nil
+	cat_view.unload()
 end
 
 -- "createScene" event is dispatched if scene's view does not exist

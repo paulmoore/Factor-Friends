@@ -38,7 +38,12 @@ local function onRowRender (event)
 	nameLabel.x = 110 + display.contentBleedWidth
 	nameLabel.y = event.view.height / 2
 	local function onPlayBtnRelease ()
-		storyboard.gotoScene("connect.scene", {params = event.index})
+		local options = {
+			effect = "slideLeft",
+			time   = 500,
+			params = event.index
+		}
+		storyboard.gotoScene("connect.scene", options)
 	end
 	local playBtn = widget.newButton({
 		width     = 140,

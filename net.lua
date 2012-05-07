@@ -63,10 +63,10 @@ local function onFacebookEvent (event)
 		elseif "loginCancelled" == event.phase then
 			dispatch("error", {details = "Login cancelled."})
 		elseif "logout" == event.phase then
+			unjoin()
 			fbToken   = nil
 			fbUser    = nil
 			fbFriends = nil
-			unjoin()
 			dispatch("logout")
     	end
 	elseif "request" == event.type then
@@ -107,7 +107,7 @@ end
 function net.login ()
 	facebook.login(FB_APP_ID, onFacebookEvent)
 	
-	fbUser = {id = "12345", name = "Paul Moore", gender = "male"}
+	--[[fbUser = {id = "12345", name = "Paul Moore", gender = "male"}
 	fbFriends = {
 		{
 			name = "Cody Vigue",
@@ -116,7 +116,7 @@ function net.login ()
 	}
 	fbToken = "123abc"
 	join()
-	dispatch("login")
+	dispatch("login")]]
 end
 
 function net.logout ()
@@ -125,6 +125,14 @@ end
 
 function net.friends ()
 	return fbFriends
+end
+
+function net.friendForId (id)
+	for i, f in ipairs(net.friends()) do
+		if f.id == id then
+			return f
+		end
+	end
 end
 
 function net.user ()

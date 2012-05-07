@@ -40,8 +40,8 @@ function view.new ()
 	
 	function self:show ()
 		local incr   = math.pi * 2 / NUM_BTNS
-		local xscale = display.contentWidth / 2.7
-		local yscale = display.contentHeight / 3.0
+		local xscale = display.contentWidth / 3.0
+		local yscale = display.contentHeight / 2.8
 		for i, btn in ipairs(btns) do
 			local deg = (i - 1) * incr
 			local nx = math.cos(deg) * xscale
