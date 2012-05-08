@@ -1,3 +1,10 @@
+--- pubnub.lua
+--
+-- Modified pubnub API to better handle AES encryption and utility functions such as uuid.
+-- https://github.com/paulmoore/pubnub-api
+--
+-- @author Paul Moore
+
 require "crypto"
 require "aeslua"
 require "base64"

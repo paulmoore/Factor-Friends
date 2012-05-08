@@ -1,3 +1,5 @@
+--- Paul Moore: This library was modified only slightly to support LuaBit v0.4 (since Corona SDK does not yet support a bitwise C extenstion or Lua 5.2).
+
 local private = {};
 local public = {};
 aeslua = public;

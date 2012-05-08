@@ -1,3 +1,26 @@
+--- splash_view.lua
+--
+-- This view is meant for displaying info text for a short period of time to the user.
+--
+-- @author Paul Moore
+--
+-- Copyright (c) 2012 Strange Ideas Software
+--
+-- This file is part of Factor Friends.
+--
+-- Factor Friends is free software: you can redistribute it and/or modify
+-- it under the terms of the GNU General Public License as published by
+-- the Free Software Foundation, either version 3 of the License, or
+-- (at your option) any later version.
+-- 
+-- Factor Friends is distributed in the hope that it will be useful,
+-- but WITHOUT ANY WARRANTY; without even the implied warranty of
+-- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+-- GNU General Public License for more details.
+-- 
+-- You should have received a copy of the GNU General Public License
+-- along with Factor Friends.  If not, see <http://www.gnu.org/licenses/>.
+
 local view = {}
 
 function view.new ()
@@ -47,7 +70,12 @@ function view.new ()
 		})
 	end
 	
+	--- Displays info text, after the previous text has disappeared.
+	--
+	-- @param text The text to display.
 	function self:show (text)
+		-- The purpose of the queue is so the user of this view can call it multiple times in a row.
+		-- If text is currently being shown, it will be placed in a queue until this view is ready again.
 		if inUse then
 			queue[#queue + 1] = text
 			return
